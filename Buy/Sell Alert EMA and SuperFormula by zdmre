@@ -1,0 +1,658 @@
+//@version=4
+study(shorttitle="Buy/Sell Alert EMA and SuperFormula by zdmre", title="Buy/Sell Alert with SuperFormula by zdmre", overlay=true, max_bars_back = 1000, max_lines_count = 50)
+//////////////////////CANDLES
+showCandlePatternsBull = input(true, title = "Show Bullish Candlestick Patterns")
+showCandlePatternsBear = input(true, title = "Show Bearish Candlestick Patterns")
+lookDMI = input(false, title = "Show Candlestick Patterns in Context with Directional Movement Indicator")
+showEMA = input(true, title = "Show MAs")
+showIchimoku = input(true, title = "Show Ichimoku")
+showBollinger = input(true, title = "Show Bollinger")
+show_signals = input(true, title = "Show Buy/Sell Signals")
+show_calc = input(false, title = "Show Calculation Values")
+show_STOPLOSSprice = input(true, title = "Show TrailingSTOP Prices")
+
+adxSmoothing = input(14, title="ADX Smoothing", minval=1)
+diLength = input(14, title="DI Length", minval=1)
+strongTrend = input(40, title="Strong Trend Theshold")
+//source = input(title="Source of MAs", type=input.source, defval=close)
+v_show_last = input(89, "Lookback Bars Length") //show_last = v_show_last
+
+
+// Trend Calculation 
+[diplus, diminus, adxValue] = dmi(diLength, adxSmoothing)
+dmiBull = lookDMI ? diplus >= diminus and adxValue >= strongTrend : true
+dmiBear = lookDMI ? diplus < diminus and adxValue >= strongTrend : true
+
+O = open
+C = close
+H = high
+L = low
+AVGH10=sma(high,10)
+AVGL10=sma(low,10)
+AVGH21=sma(high,21)
+AVGL21=sma(low,21)
+
+DojiSize = input(0.05, minval=0.01, title="Doji size")
+data=(abs(open - close) <= (high - low) * DojiSize)
+plotchar(data, title="Doji", text='Doji', color=color.white)
+
+data2=(close[2] > open[2] and min(open[1], close[1]) > close[2] and open < min(open[1], close[1]) and close < open )
+plotshape(data2 and showCandlePatternsBear, title= "Evening Star", color=color.red, style=shape.arrowdown, text="Evening\nStar")
+
+data3=(close[2] < open[2] and max(open[1], close[1]) < close[2] and open > max(open[1], close[1]) and close > open )
+plotshape(data3 and showCandlePatternsBull,  title= "Morning Star", location=location.belowbar, color=color.lime, style=shape.arrowup, text="Morning\nStar")
+
+data4=(open[1] < close[1] and open > close[1] and high - max(open, close) >= abs(open - close) * 3 and min(close, open) - low <= abs(open - close))
+plotshape(data4 and showCandlePatternsBear, title= "Shooting Star", color=color.red, style=shape.arrowdown, text="Shooting\nStar")
+
+data5=(((high - low)>3*(open -close)) and  ((close - low)/(.001 + high - low) > 0.6) and ((open - low)/(.001 + high - low) > 0.6))
+plotshape(data5 and showCandlePatternsBull, title= "Hammer", location=location.belowbar, color=color.white, style=shape.diamond, text="H")
+
+data5b=(((high - low)>3*(open -close)) and  ((high - close)/(.001 + high - low) > 0.6) and ((high - open)/(.001 + high - low) > 0.6))
+plotshape(data5b and showCandlePatternsBull, title= "Inverted Hammer", location=location.belowbar, color=color.white, style=shape.diamond, text="IH")
+
+data6=(close[1] > open[1] and open > close and open <= close[1] and open[1] <= close and open - close < close[1] - open[1] )
+plotshape(data6 and showCandlePatternsBear, title= "Bearish Harami",  color=color.red, style=shape.arrowdown, text="Bearish\nH")
+
+data7=(open[1] > close[1] and close > open and close <= open[1] and close[1] <= open and close - open < open[1] - close[1] )
+plotshape(data7 and showCandlePatternsBull,  title= "Bullish Harami", location=location.belowbar, color=color.lime, style=shape.arrowup, text="Bullish\nH")
+
+data8=(close[1] > open[1] and open > close and open >= close[1] and open[1] >= close and open - close > close[1] - open[1] )
+plotshape(data8 and showCandlePatternsBear,  title= "Bearish Engulfing", color=color.red, style=shape.arrowdown, text="Bear\nE")
+
+data9=(open[1] > close[1] and close > open and close >= open[1] and close[1] >= open and close - open > open[1] - close[1] )
+plotshape(data9 and showCandlePatternsBull, title= "Bullish Engulfing", location=location.belowbar, color=color.lime, style=shape.arrowup, text="Bullish\nE")
+
+upper = highest(10)[1]
+data10=(close[1] < open[1] and  open < low[1] and close > close[1] + ((open[1] - close[1])/2) and close < open[1])
+plotshape(data10 and showCandlePatternsBull, title= "Piercing Line", location=location.belowbar, color=color.lime, style=shape.arrowup, text="Piercing\nLine")
+
+lower = lowest(10)[1]
+data11=(low == open and  open < lower and open < close and close > ((high[1] - low[1]) / 2) + low[1])
+plotshape(data11 and showCandlePatternsBull, title= "Bullish Belt", location=location.belowbar, color=color.lime, style=shape.arrowup, text="Bullish\nBelt")
+
+data12=(open[1]>close[1] and open>=open[1] and close>open)
+plotshape(data12 and showCandlePatternsBull, title= "Bullish Kicker", location=location.belowbar, color=color.lime, style=shape.arrowup, text="Bullish\nKicker")
+
+data13=(open[1]<close[1] and open<=open[1] and close<=open)
+plotshape(data13 and showCandlePatternsBear, title= "Bearish Kicker", color=color.red, style=shape.arrowdown, text="Bearish\nKicker")
+
+data14=(((high-low>4*(open-close))and((close-low)/(.001+high-low)>=0.75)and((open-low)/(.001+high-low)>=0.75)) and high[1] < open and high[2] < open)
+plotshape(data14 and showCandlePatternsBear,  title= "Hanging Man", color=color.red, style=shape.arrowdown, text="Hanging\nMan")
+
+data15=((close[1]>open[1])and(((close[1]+open[1])/2)>close)and(open>close)and(open>close[1])and(close>open[1])and((open-close)/(.001+(high-low))>0.6))
+plotshape(data15 and showCandlePatternsBear, title= "Dark Cloud Cover", color=color.red, style=shape.arrowdown, text="Dark\nCloudCover")
+
+// Three Inside Up (Confirmed Bullish Harami)
+bullThreeInsideUp = dmiBear and
+     O[2] - C[2] >= .7 * (H[2] - L[2]) and
+     (H[2] - L[2]) >= AVGH10[2] - AVGL10[2] and
+     C[1] > O[1] and
+     O[1] > C[2] and
+     C[1] < O[2] and
+     C[1] - O[1] <= .6 * (O[2] - C[2]) and
+     O > O[1] and
+     O < C[1] and
+     C > C[1] and
+     C - O >= .7 * (H - L)
+plotshape(showCandlePatternsBull and bullThreeInsideUp,  
+     title= "Three Inside Up", 
+     color=color.green, 
+     style=shape.arrowup, 
+     location=location.belowbar, 
+     text="Three\nInsideUp")
+
+//Three Outside Up (Confirmed Bullish Engulfing)
+bullThreeOutsideUp = dmiBear and
+     O[2] > C[2] and
+     C[1] - O[1] >= .7 * (H[1] - L[1]) and
+     C[1] > O[2] and
+     O[1] < C[2] and
+     (H[1] - L[1]) >= 1.2 * (AVGH10[1] - AVGL10[1]) and
+     O > O[1] and
+     O < C[1] and
+     C > C[1] and
+     C - O >= .7 * (H - L)
+plotshape(showCandlePatternsBull and bullThreeOutsideUp,  
+     title= "Three Outside Up", 
+     color=color.green, 
+     style=shape.arrowup, 
+     location=location.belowbar, 
+     text="Three\nOutsideUp")
+
+// Three White Soldiers
+bullThreeWhiteSoldiers = dmiBear and
+     C > C[1] and 
+     C[1] > C[2] and 
+     C > O and 
+     C[1] > O[1] and 
+     C[2] > O[2] and 
+     abs(C[2] - O[2]) > .5 * (H[2] - L[2]) and 
+     abs(C[1] - O[1]) > .5 * (H[1] - L[1]) and 
+     H - L > AVGH21 - AVGL21 and 
+     O > O[1] and 
+     O < C[1] and 
+     O[1] > O[2] and 
+     O[1] < C[2] and 
+     O[2] > O[3] and 
+     O[2] < C[3] and 
+     C > .85 * H and 
+     C[1] > .85 * H[1] and 
+     C[2] > .85 * H[2]
+plotshape(showCandlePatternsBull and bullThreeWhiteSoldiers,  
+     title= "Three White Soldiers", 
+     color=color.green, 
+     style=shape.arrowup, 
+     location=location.belowbar, 
+     text="ThreeWhite\nSoldiers")
+
+// Tweezer Bottom
+bullTweezerBottom = dmiBear and
+     (L == .9 * L[1] or L == 1.1 * L[1]) and
+     abs(C - O) < .2 * abs(C[1] - O[1]) and
+     abs(C[1] - O[1]) >= .9 * (H[1] - L[1]) and
+     H[1] - L[1] >= 1.3 * (AVGH21 - AVGL21)
+plotshape(showCandlePatternsBull and bullTweezerBottom,  
+     title= "Tweezer Bottom", 
+     color=color.green, 
+     style=shape.arrowup, 
+     location=location.belowbar, 
+     text="Tweezer\nBottom")
+
+//
+// Bearish Candlestick Patterns 
+//
+
+// Three Inside Down
+bearThreeInsideDown = dmiBull and
+     abs(C[2] - O[2]) > .5 * (H[1] - L[1]) and
+     C[2] > O[2] and
+     C[1] < O[1] and
+     H[1] < C[2] and
+     L[1] > O[2] and
+     C < O and
+     C < C[1]
+plotshape(showCandlePatternsBear and bearThreeInsideDown, 
+     title= "Three Inside Down", 
+     color=color.red, 
+     style=shape.arrowdown, 
+     text="Three\nInsideDown")
+
+// Three Outside Down (Confirmed Bearish Engulfing)
+bearThreeOutsideDown = dmiBull and
+     C[1] - O[1] >= .7 * (H[1] - L[1]) and
+     H[1] - L[1] >= AVGH10[1] - AVGL10[1] and
+     C < O and
+     O < C[1] and
+     C > O[1] and
+     O - C <= .6 * (C[1] - O[1])
+plotshape(showCandlePatternsBear and bearThreeOutsideDown, 
+     title= "Three Outside Down", 
+     color=color.red, 
+     style=shape.arrowdown, 
+     text="Three\nOutsideDown")
+
+// Three Black Crows
+bearThreeBlackCrows = dmiBull and
+     O[1] < O[2] and
+     O[1] > .9 * C[2] and
+     O < O[1] and
+     O > .9 * C[1] and
+     C[1] < L[2] and
+     C < L[1] and
+     C[2] < 1.05 * L[2] and
+     C[1] < 1.05 * L[1] and
+     C < 1.05 * L
+plotshape(showCandlePatternsBear and bearThreeBlackCrows, 
+     title= "Three Black Crows", 
+     color=color.red, 
+     style=shape.arrowdown, 
+     text="Three\nBlackCrows")
+
+// Gravestone Doji
+bearGravestone = dmiBull and
+     abs(O-C)<=.01*(H-L) 
+     and (H-C)>=.95*(H-L) 
+     and (H>L) 
+     and (H==highest(high,10)) 
+     and (H-L)>=(AVGH10-AVGL10)
+plotshape(showCandlePatternsBear and bearGravestone, 
+     title= "Gravestone", 
+     color=color.red, 
+     style=shape.arrowdown, 
+     text="Gravestone\nDoji",
+     show_last = v_show_last)
+
+
+/////////////////////EMA
+len = input(8, minval=1, title="Length")
+len2 = input(20, minval=1, title="Length52")
+src = input(close, title="Source")
+out = ema(src, len)
+out2=ema(src,len2)
+plot(showEMA? out:na, title="EMA", color=#e0d700, linewidth=1)
+plot(showEMA? out2:na, title="EMA2", color=#ffffff, linewidth=1)
+plot(crossover(out, out2) ? out2 : na, title='Up Cross', style=plot.style_cross, color=color.green, linewidth=5, transp=0)
+plot(crossunder(out, out2) ? out2 : na, title='Down Cross', style=plot.style_cross, color=color.red, linewidth=5, transp=15)
+
+///////////////////// ICHIMOKU
+conversionPeriods = input(5, minval=1)
+basePeriods = input(26, minval=1)
+laggingSpan2Periods = input(52, minval=1),
+displacement = input(26, minval=1)
+donchian(len) => avg(lowest(len), highest(len))
+conversionLine = donchian(conversionPeriods)
+baseLine = donchian(basePeriods)
+leadLine1 = avg(conversionLine, baseLine)
+leadLine2 = donchian(laggingSpan2Periods)
+bottomcloud=leadLine2[displacement-1]
+uppercloud=leadLine1[displacement-1]
+kjuncol = conversionLine > baseLine ? color.blue : conversionLine < baseLine ? color.red : color.orange
+plot(showIchimoku?conversionLine:na, color=color.purple, title="Conversion Line")
+plot(showIchimoku?baseLine:na, color=kjuncol,linewidth=2,transp=5, title="Base Line")
+p1 = plot(showIchimoku?leadLine1:na, offset = displacement  -1, color=color.green, title="Lead 1")
+p2 = plot(showIchimoku?leadLine2:na, offset = displacement - 1, color=color.red, title="Lead 2")
+fill(p1, p2, color = leadLine1 > leadLine2 ? color.green : color.red, transp=70)
+
+///////////////////// HIGH AND LOW BAR
+newHigh = (high == highest(high, 30))
+newLow  = (low == lowest(low, 30))
+highText = "New " + "\n" + "high"
+lowText  = "New " + "\n" + "30-bar " + "\n" + "low"
+//plotshape(series=newHigh, location=location.abovebar, style=shape.diamond, color=color.white, text=highText, transp=100)
+//plotshape(series=newLow, location=location.belowbar,style=shape.circle, color=color.purple, text=lowText, transp=100)
+
+///////////////////// RSI & BOLLINGER
+RSIlength = input(14,title="RSI Period Length") 
+RSIoverSold = 30
+RSIoverBought = 70
+vrsi = rsi(close, RSIlength)
+
+BBlength = input(200, minval=1,title="Bollinger Period Length")
+BBmult = 2 // input(2.0, minval=0.001, maxval=50,title="Bollinger Bands Standard Deviation")
+BBbasis = sma(close, BBlength)
+BBdev = BBmult * stdev(close, BBlength)
+BBupper = BBbasis + BBdev
+BBlower = BBbasis - BBdev
+buyEntry = crossover(close, BBlower)
+sellEntry = crossunder(close, BBupper)
+plot(showBollinger?BBbasis:na, color=color.aqua,title="Bollinger Bands SMA Basis Line", linewidth=3)
+px = plot(showBollinger?BBupper:na, color=color.silver,title="Bollinger Bands Upper Line")
+py = plot(showBollinger?BBlower:na , color=color.silver,title="Bollinger Bands Lower Line")
+fill(px, py)
+
+switch1=input(true, title="Enable Bar Color?")
+switch2=input(true, title="Enable Background Color?")
+TrendColor = RSIoverBought and (close[1] > BBupper and close < BBupper) and BBbasis < BBbasis[1] ? color.red : RSIoverSold and (close[1] < BBlower and close > BBlower) and BBbasis > BBbasis[1] ? color.green : na
+barcolor(switch1?TrendColor:na)
+bgcolor(switch2?TrendColor:na)
+ma50 = sma(close, 50)
+lineColor50 = iff(ma50> BBbasis, color.green, color.red) 
+plot(showBollinger? ma50:na, title='MA 50', style=plot.style_line, color=lineColor50, linewidth=3)
+plot(crossover(ma50, BBbasis)  and showBollinger? BBbasis : na, title='Golden Cross', style=plot.style_cross, color=color.green, linewidth=5, transp=0)
+plot(crossunder(ma50, BBbasis)  and showBollinger? BBbasis : na, title='Death Cross', style=plot.style_cross, color=color.red, linewidth=5, transp=15)
+
+
+
+///////////////////// FORMULA
+bearish = cross(out2,out) == 1 and out < out2
+bullish = cross(out2,out) == 1 and out > out2
+
+leftbars = input(1, minval=1, title='Bars to the left')
+rightbars = input(0, minval=1, title='Bars to the right')
+
+
+buyavg =   ((close+high)/2.02 - (high*(1-open/close)*(1-((low*open)/(high*close))))) 
+sellavg = (((low+close)/1.99 + (low*(1-low/open)*(1-((low*open)/(close*high)))/1.1)) + out2)/2
+
+if show_signals
+    if bullish
+        label1 = label.new(bar_index[rightbars], low[rightbars]/1.01, text=("BUY: \n"+ tostring(buyavg)), style=label.style_label_up, color=color.yellow)
+        label.set_size(label1, size.small)
+    if bearish
+        label2 = label.new(bar_index[rightbars], high[rightbars]*1.01, text=("SELL: \n"+ tostring(sellavg)), style=label.style_label_down, color=#8181F7)
+        label.set_size(label2, size.small)
+///////////////////// SIGNAL
+triggerAlert = if (bullish or bearish)
+    true
+else
+    false
+alertcondition(condition=triggerAlert, title='SIGNAL Alert', message="Price {{ticker}} = {{close}}")
+
+ 
+///////////////////// THEIL-SEN ESTIMATOR (thanks my friend!)
+
+// This source code is subject to the terms of the Mozilla Public License 2.0 at https://mozilla.org/MPL/2.0/
+// © tbiktag
+//
+// Pine code implementation of the Theil-Sen Estimator,
+// a method for robustly fitting a line to sample points (linear regression).
+// --- subroutines ---
+allslopes(_n, _y) =>
+    // Get slopes for all pairs of _n data points 
+    // _n :: number of points
+    // _y :: source time series, e.g. close
+    _S = array.new_float(0)
+    if _n > 2
+        for i = 0 to _n-2
+            for j = i+1 to _n-1
+                array.push(_S,(_y[i]-_y[j])/(j-i))
+    _S
+
+rndslopes(_S, _numpoints) =>
+    // Get _numpoints random slopes from array _S
+    // _Srnd :: output array
+    _Srnd = array.new_float(0)
+    int _ntmp = array.size(_S)
+    int _n = _ntmp > _numpoints?_numpoints:_ntmp
+    int _i = 0
+    int _s1 = 0
+    int _s2 = 0
+    int _s3 = 0
+    float _rnd = na
+    if _n > 2
+        for k = 0 to _n-1
+            // use Wichmann–Hill pseudo-random number generator
+            // initial seed values (should be random integer from 0 to 30,000)
+            _s1 := k * int(ohlc4[1])
+            _s1 := k * int(ohlc4[1] + ohlc4[2])
+            _s3 := k * int(ohlc4[3])
+            // generate uniformly distr _rnd (between 0 and 1)
+            _s1 := 171 * (_s1 % 30269)
+            _s2 := 172 * (_s2 % 30269)
+            _s3 := 170 * (_s3 % 30269)
+            _rnd := (float(_s1)/30269.0 + float(_s2)/30307.0 + float(_s3)/30323.0) % 1
+            _i := int(_rnd*_ntmp)
+            // Add element to _Srnd
+            array.push(_Srnd,array.get(_S,_i))
+            // drop chosen element
+            array.remove(_S,_i)
+            _ntmp := _ntmp-1
+    _Srnd
+
+intercepts(_src,_n,_mslope) =>
+    // Get all intercepts (Y - mslope*X) 
+    // _n :: number of data points
+    // _mslope :: median slope determined by means of TS model
+    _I = array.new_float(0)
+    if _n > 2
+        for i = 0 to _n-1
+            array.push(_I,_src[_n-1-i] - _mslope*i)
+    _I
+
+
+truncate(_value, _decimals) =>
+    // For output: Truncates a given float to a certain number of decimals
+    _factor = pow(10, _decimals)
+    int(_value * _factor) / _factor
+
+rmsd(_src,_x,_a,_b,_n) =>
+    float _rmsd = 0.0
+    for i = 0 to _n-1
+        _rmsd := _rmsd + pow(_src[i] -_a -_b*(_x-i),2)/_n
+    sqrt(_rmsd)
+
+// --- MAIN ---
+len_t = input(title = "Length", type = input.integer, defval = 100, minval = 3, maxval = 400)
+src_t = input(title = "Source", type = input.source, defval = close)
+method = input(title = "Pair Selection Method", 
+               defval = "All", options = ["All", "Random"])
+numpairs = input(title = "Number of Pairs (if Method == Random)", type = input.integer, defval = 500, minval = 3)
+showinterval = input(title = "Show Prediction Interval", defval = true)
+mult = input(title = "Prediction Interval Multiplier", type = input.float, defval = 0.57, minval = 0.1)
+showresult = input(title = "Show Slope and Intercept", defval = false)
+colup = input( title = "Color Up", defval = color.green)
+coldw = input( title = "Color Down", defval = color.red)
+colbr = input( title = "Channel Break Color", defval = color.orange)
+lw = input(title = "Line Width", defval = 2)
+extendln = input(title = "Extend Line", defval = true)
+
+// get TS estimate only for the last barstate
+if not barstate.islast
+    len_t:=0
+
+S = allslopes(len_t, src_t)
+if method == "Random" 
+    S := rndslopes(S,numpairs)
+mslope = array.median(S)
+I = intercepts(src_t,len_t,mslope)
+minter = array.median(I)
+
+// apply estimator
+x = bar_index
+x1 = x-len_t
+x2 = x
+y1 = minter
+y2 = minter+mslope*(len_t-1)
+
+//estimate prediction interval (as \pm mult*RMSD)
+float rmse = 0.0
+if len_t>0 
+    for j = 0 to len_t-1
+        rmse := rmse + pow(src_t[j] - (minter + mslope*(len_t - j)), 2)/len
+dev = mult*sqrt(rmse)
+
+// check if channel is broken
+isbroken = (src_t > y2 + dev) or (src_t < y2 - dev)
+
+// plot results
+line a = line.new(x1, y1, x2, y2, xloc.bar_index, 
+                  extend = extendln?extend.right:extend.none, 
+                  color=isbroken?colbr:mslope>0?colup:coldw, width=lw)
+line.delete(a[1])
+if showinterval
+    line ap = line.new(x1, y1+dev, x2, y2+dev, xloc.bar_index, 
+                      extend = extendln?extend.right:extend.none, 
+                      color=isbroken?colbr:mslope>0?colup:coldw, width=1, style=line.style_dashed)
+    line am = line.new(x1, y1-dev, x2, y2-dev, xloc.bar_index, 
+                      extend = extendln?extend.right:extend.none, 
+                      color=isbroken?colbr:mslope>0?colup:coldw, width=1, style=line.style_dashed)
+    line.delete(ap[1])
+    line.delete(am[1])
+if showresult and barstate.islast
+    label b = label.new(bar_index-(len_t-1), mslope>0?y1-dev:y1+dev, 
+                       style = mslope>0?label.style_label_up:label.style_label_down, 
+                       text = "Slope "+tostring(truncate(mslope,2))+', Intercept '+tostring(truncate(minter,2)), 
+                       color = mslope>0?colup:coldw)
+    label.delete(b[1])
+
+alertcondition(isbroken and not isbroken[1], title='Channel Break', message='Price is Breaking the Theil-Sen Channel')
+
+///////////////////TRAILING STOP LOSS ////////////////////
+
+ATR_Period = input(14)
+ATR_Mult = input(3.5)
+var float ATR_TrailSL = na
+var int pos = na
+xATR = atr(ATR_Period)
+nLoss = ATR_Mult * xATR
+
+ATR_TrailSL    := iff(close > nz(ATR_TrailSL[1], 0) and close[1] > nz(ATR_TrailSL[1], 0), 
+                             max(nz(ATR_TrailSL[1]), close - nLoss), 
+                             iff(close < nz(ATR_TrailSL[1], 0) and close[1] < nz(ATR_TrailSL[1], 0), 
+                                 min(nz(ATR_TrailSL[1]), close + nLoss), 
+                                 iff(close > nz(ATR_TrailSL[1], 0), 
+                                     close - nLoss, 
+                                     close + nLoss)))
+
+pos                 := iff(close[1] < nz(ATR_TrailSL[1], 0) and close > nz(ATR_TrailSL[1], 0), 
+                         1, 
+                         iff(close[1] > nz(ATR_TrailSL[1], 0) and close < nz(ATR_TrailSL[1], 0), 
+                          -1, 
+                          nz(pos[1], 0))) 
+
+atr_color = pos == -1 ? color.blue: pos == 1 ? color.red : color.aqua
+plot(ATR_TrailSL, "Trailing StopLoss", atr_color, linewidth=2)
+
+if show_STOPLOSSprice
+    if pos ==-1
+        label ShortStop =label.new(bar_index, na, 'SHORT stop price: \n' + tostring(ATR_TrailSL), color=color.blue, textcolor=color.white, style=label.style_labeldown, yloc=yloc.abovebar)
+        label.delete(ShortStop[1])    
+    if pos == 1
+        label LongStop = label.new(bar_index, na, 'LONG stop price: \n' + tostring(ATR_TrailSL), color=color.red, textcolor=color.white, style=label.style_labelup, yloc=yloc.belowbar)
+        label.delete(LongStop[1])
+
+
+//////////////////Bitcoin Investor Tool: 2-Year MA Multiplier + 1-Year MA///////////
+ma2year = sma(close, 730)
+ma2yearx5 = ma2year*5
+ma1year = sma(close, 365)
+plot(showEMA? ma1year:na, title = 'MA1year', style=plot.style_line, color=color.purple, linewidth=2)
+plot(showEMA? ma2year:na, title = 'MA2year', style=plot.style_line, color=color.orange, linewidth=4)
+plot(showEMA? ma2yearx5:na, title = 'MA2yearx5', style=plot.style_line, color=color.blue, linewidth=4)
+
+
+///////////////////Pi Cycle Top Indicator///////////////////
+pihigh = input(350, minval=1, title="Pi350")
+pisrc = input(close, title="Pi350Source")
+offset = input(title="Offset", type=input.integer, defval=0, minval=-500, maxval=500)
+piout = 2*sma(pisrc, pihigh)
+pi1=plot(showEMA?piout:na, color=color.yellow, title="Pi350MA", offset=offset)
+
+pilow = input(111, minval=1, title="Pi111")
+pisrc2 = input(close, title="Pi111Source")
+offset2 = input(title="Offset", type=input.integer, defval=0, minval=-500, maxval=500)
+piout2 = sma(pisrc2, pilow)
+pi2=plot(showEMA? piout2:na, color=color.aqua, title="Pi111MA", offset=offset2)
+
+fill(pi1, pi2, color = piout > piout2 ? color.orange : color.red)
+//plot(crossover(piout, piout2) ? piout2 : na, title='Pi Bull Cross', style=plot.style_columns, color=color.aqua, linewidth=4, transp=0)
+plot(crossunder(piout, piout2) ? piout2 : na, title='Pi Bear Cross', style=plot.style_columns, color=color.red, linewidth=4, transp=0)
+TrendColorPiCycle = crossunder(piout, piout2) ? color.red : na
+switchpi=input(true, title="PiCycle Cross Column Color?")
+bgcolor(switchpi?TrendColorPiCycle:na,transp=40)
+
+///////////////////// CALC VALUE
+
+if show_calc
+    buyavgcalc =   ((close+high)/2.02 - (high*(1-open/close)*(1-((low*open)/(high*close))))) 
+    sellavgcalc = (low+close)/1.98 + (low*(1-low/open)*(1-((low*open)/(close*high)))/1)
+    labelsell = label.new(bar_index[0], high[0]*1.02,text="S\n" + tostring(sellavgcalc), style=label.style_none, size=size.normal, textcolor= color.red, textalign=text.align_center )
+    labelbuy = label.new(bar_index[0], low[0]/1.02, text=tostring(buyavgcalc) + "\n B", style=label.style_none, size=size.normal, textcolor = color.yellow,textalign=text.align_center)
+    label.delete(labelbuy[1])
+    label.delete(labelsell[1])
+
+///////////////////// KAMA (Thanks HPotter)
+KAMALength = input(21, minval=1)
+xPrice = close
+xvnoise = abs(xPrice - xPrice[1])
+nAMA = 0.0
+nfastend = 0.666
+nslowend = 0.0645
+nsignal = abs(xPrice - xPrice[KAMALength])
+nnoise = sum(xvnoise, KAMALength)
+nefratio = iff(nnoise != 0, nsignal / nnoise, 0)
+nsmooth = pow(nefratio * (nfastend - nslowend) + nslowend, 2) 
+nAMA := nz(nAMA[1]) + nsmooth * (xPrice - nz(nAMA[1]))
+plot(showEMA? nAMA:na, color=color.blue, title="KAMA")
+
+
+
+///////////////////// CUP FINDER (Thanks LonesomeTheBlue)
+loopback = input(defval = 150, title = "Number of Bars to search", minval = 30, maxval = 250)
+widthr = input(defval = 5., title = "Channel Width of the Cup", minval = 1)
+check_hc = input(defval = "Close", title = "Source for Breakout", options = ["Close", "High/Low"])
+include_rate = input(75., title = "Contained Bar Rate %", minval = 10, maxval = 100) / 100
+show_channel = input(false, title = "Show Channels of Cups")
+no_label = input(false, title = "Don't Show Labels")
+remove_old_lines = input(false, title = "Remove Old Lines")
+remove_old_labels = input(false, title = "Remove Old Labels")
+bullcolor = input(defval = color.lime, title = "Colors", inline = "colors")
+bearcolor = input(defval = color.red, title = "", inline = "colors")
+ 
+// used for calculation&drawing of circles
+float width = (highest(292) - lowest(292)) / 100
+float uwidth = width * widthr
+bool highestbar = highestbars(30) == 0
+bool lowestbar = lowestbars(30) == 0
+float bullsrc = check_hc == "Close" ? close : high
+float bearsrc = check_hc == "Close" ? close : low
+
+float hh = 0.
+float lasthh = 0.
+int ind = 0
+bool bull = false
+for xcup = 1 to loopback
+    lasthh := max(lasthh, high[xcup])
+    if bullsrc <= lasthh
+        break
+    
+    if xcup >= 20 and bullsrc > high[xcup] and close[1] < high[xcup] and high[xcup] >= lasthh and highestbar[xcup]
+        hh := high[xcup]
+        ind := xcup
+        bull := true
+
+float ll = 0.
+lastll = highest(292)
+if ind == 0
+    for xcup = 1 to loopback
+        lastll := min(lastll, low[xcup])
+        if bearsrc >= lastll
+            break
+        
+        if xcup >= 20 and bearsrc < low[xcup] and close[1] > low[xcup] and low[xcup] <= lastll and lowestbar[xcup]
+            ll := low[xcup]
+            ind := xcup
+
+Round(val)=> round(val / syminfo.mintick) * syminfo.mintick
+
+var cup_lines = array.new_line(0)
+var label cup_label = na
+levs = array.new_float(0)
+bullish_cup = false
+bearish_cup = false
+int included = na
+if ind != 0
+    float pow_radius = pow(ind / 2, 2)
+    end = round((ind - (ind % 2)) / 2)
+    if ind % 2 == 0
+        array.push(levs, bull ? hh - sqrt(pow_radius) * width : ll + sqrt(pow_radius) * width)
+
+    for xcup = 1 to end 
+        ycoord = sqrt(pow_radius - pow(xcup, 2)) * width
+        array.push(levs, bull ? hh - ycoord : ll + ycoord)
+        array.unshift(levs, bull ? hh - ycoord : ll + ycoord)
+    if ind % 2 == 1
+        array.push(levs, bull ? hh : ll)
+        array.unshift(levs, bull ? hh : ll)
+        
+    in_cnt = 0
+    for xcup = 0 to array.size(levs) - 1
+        if (min(array.get(levs, xcup) + uwidth, high[xcup]) - max(array.get(levs, xcup) - uwidth, low[xcup]) > 0)
+            in_cnt := in_cnt + 1
+    
+    if in_cnt / (ind + 1) >= include_rate
+        if not no_label
+            if remove_old_labels
+                label.delete(cup_label)
+            cup_label := label.new(bar_index, array.get(levs, 0), 
+                      text = "Cup\nRadius = " + tostring(Round(width * ind / 2)) + "\nIncluded = " + tostring(100 * in_cnt / (ind + 1), '#.#') +"%",
+                      color = bull ? bullcolor : bearcolor, 
+                      textcolor = bull ? color.black : color.white,
+                      textalign = text.align_left, 
+                      style = bull ? label.style_label_lower_right : label.style_label_upper_right)
+                
+        if remove_old_lines and array.size(cup_lines) > 0
+            for xcup = 0 to array.size(cup_lines) - 1
+                line.delete(array.get(cup_lines, xcup))
+        
+        array.push(cup_lines, line.new(x1 = bar_index, y1 = array.get(levs, 0), x2 = bar_index - ind + 1, y2 = array.get(levs, 0), color = bull ? bullcolor : bearcolor, style = line.style_dashed))
+        xloc = ind
+        for xcup = 0 to array.size(levs) - 2
+            array.push(cup_lines, line.new(x1 = bar_index - xloc, y1 = array.get(levs, xcup), x2 = bar_index - xloc + 1, y2 = array.get(levs, xcup + 1), color = bull ? bullcolor : bearcolor, width = 3))
+            if show_channel and xcup % 2 == 0 and xcup > 0 and xcup < array.size(levs) - 2
+                array.push(cup_lines, line.new(x1 = bar_index - xloc, y1 = array.get(levs, xcup) + uwidth, x2 = bar_index - xloc + 1, y2 = array.get(levs, xcup + 1) + uwidth, color = bull ? bullcolor : bearcolor))
+                array.push(cup_lines, line.new(x1 = bar_index - xloc, y1 = array.get(levs, xcup) - uwidth, x2 = bar_index - xloc + 1, y2 = array.get(levs, xcup + 1) - uwidth, color = bull ? bullcolor : bearcolor))
+            
+            xloc := xloc - 1
+        
+        included := round(100 * in_cnt / (ind + 1))
+        if bull 
+            bullish_cup := true
+        else
+            bearish_cup := true
+
+plot(included, title = "included", display = display.none)
+alertcondition(bullish_cup, title = "Bullish Cup Found", message = 'Bullish Cup Found, Included:{{plot("included")}}')
+alertcondition(bearish_cup, title = "Bearish Cup Found", message = 'Bearish Cup Found, Included:{{plot("included")}}')
+alertcondition(bullish_cup or bearish_cup, title = "Cup Found", message = 'Cup Found, Included:{{plot("included")}}')
