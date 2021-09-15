@@ -1,0 +1,33 @@
+//@version=4
+study("StochRSI Linear Regression by zdmre", "SRSI Linear Regression", true)
+source = close
+lengthRSI = input(14, minval=8), lengthStoch = input(5, minval=5)
+smoothK = input(3,minval=3), smoothD = input(3,minval=3)
+OverSold = input(20), OverBought = input(80)
+rsi1 = rsi(source, lengthRSI)
+k = sma(stoch(rsi1, rsi1, rsi1, lengthStoch), smoothK)
+d = sma(k, smoothD)
+hline(OverSold,color=color.green)
+hline(OverBought,color=color.red)
+plot(k, color=color.blue,title="k-line")
+plot(d, color=color.orange,title="d-line",linewidth=1)
+plot(crossover(k, d) ? d : na, title='CrossUp', style=plot.style_cross, color=color.green, linewidth=5, transp=0)
+plot(crossunder(k, d) ? d : na, title='CrossDown', style=plot.style_cross, color=color.red, linewidth=5, transp=0)
+drawLine(X1, Y1, X2, Y2, ExtendType, Color, LineStyle) => var line Line = na, Line := line.new(X1, Y1, X2, Y2, xloc.bar_index, ExtendType, Color, LineStyle, 2), line.delete(Line[1]) 
+rsdcr2(PeriodMinusOne, Deviations, Estimate) =>
+    var period = PeriodMinusOne + 1, var devDenominator = Estimate=="Unbiased" ? PeriodMinusOne : period, Ex = 0.0, Ex2 = 0.0, Exy = 0.0, Ey = 0.0, for i=0 to PeriodMinusOne
+        closeI = nz(rsi1[i]), Ex := Ex + i, Ex2 := Ex2 + i * i, Exy := Exy + closeI * i, Ey := Ey + closeI
+    ExEx = Ex * Ex, slope = Ex2==ExEx ? 0.0 : (period * Exy - Ex * Ey) / (period * Ex2 - ExEx), linearRegression = (Ey - slope * Ex) / period, intercept = linearRegression + bar_index * slope, deviation = 0.0, for i=0 to PeriodMinusOne
+        deviation := deviation + pow(nz(rsi1[i]) - (intercept - bar_index[i] * slope), 2.0)
+    deviation := Deviations * sqrt(deviation / devDenominator), correlate = correlation(rsi1, bar_index, period), r2 = pow(correlate, 2.0), [linearRegression, slope, deviation, correlate, r2]
+periodTrend    = input(        89,  "Trend Period", input.integer,  minval=  4)
+deviationsAmnt = input(       2.5, " Deviation", input.float  ,  minval=0.1, step=0.1)
+estimatorType  = input("Unbiased",    " Estimator", input.string , options=["Biased","Unbiased"])
+var extendType = input(   "Right", "Extend", input.string , options=[ "Right","Segment" ])=="Right" ? extend.right : extend.none
+periodMinusOne = periodTrend - 1
+[linReg, slope, deviation, correlate, r2] = rsdcr2(periodMinusOne, deviationsAmnt, estimatorType)
+endPointBar = bar_index - periodTrend + 1, endPointY = linReg + slope * periodMinusOne
+drawLine(endPointBar, endPointY + deviation, bar_index, linReg + deviation, extendType, #FF0000ff, line.style_solid )
+drawLine(endPointBar, endPointY            , bar_index, linReg            , extendType, #CCCC00ff, line.style_dotted)
+drawLine(endPointBar, endPointY - deviation, bar_index, linReg - deviation, extendType, #00FF00ff, line.style_solid )
+var label Label = na, Label := label.new(max(0, endPointBar), endPointY, text=tostring(correlate, "#.####"), color=0.0>correlate ? #AA000080 : #00AA0080, textcolor=#FFFFFFff, style=label.style_label_right, tooltip="Correlation: " + tostring(correlate) + "\nR2: " + tostring(r2)), label.delete(Label[1])
