@@ -3,25 +3,30 @@ study(shorttitle="Buy/Sell Alert EMA and SuperFormula by zdmre", title="Buy/Sell
 //////////////////////CANDLES
 showCandlePatternsBull = input(true, title = "Show Bullish Candlestick Patterns")
 showCandlePatternsBear = input(true, title = "Show Bearish Candlestick Patterns")
-lookDMI = input(false, title = "Show Candlestick Patterns in Context with Directional Movement Indicator")
+lookDMI = input(false, title = "Show Candlestick Patterns in Context with DMI")
+lookRSI = input(false, title = "Show Candlestick Patterns in Context with RSI")
 showEMA = input(true, title = "Show MAs")
 showIchimoku = input(true, title = "Show Ichimoku")
 showBollinger = input(true, title = "Show Bollinger")
 show_signals = input(true, title = "Show Buy/Sell Signals")
 show_calc = input(false, title = "Show Calculation Values")
-show_STOPLOSSprice = input(true, title = "Show TrailingSTOP Prices")
+show_STOPLOSSprice = input(true, title = "Show TrailingSTOP&LongShort Prices")
 
 adxSmoothing = input(14, title="ADX Smoothing", minval=1)
 diLength = input(14, title="DI Length", minval=1)
-strongTrend = input(40, title="Strong Trend Theshold")
+strongTrend = input(40, title="Strong Trend Threshold")
 //source = input(title="Source of MAs", type=input.source, defval=close)
 v_show_last = input(89, "Lookback Bars Length") //show_last = v_show_last
+RSIlen = input(14,title="Pattern RSI Period Length") 
+vrsi1 = rsi(close, RSIlen)
 
 
 // Trend Calculation 
 [diplus, diminus, adxValue] = dmi(diLength, adxSmoothing)
 dmiBull = lookDMI ? diplus >= diminus and adxValue >= strongTrend : true
 dmiBear = lookDMI ? diplus < diminus and adxValue >= strongTrend : true
+dmiBullrsi = lookRSI ? vrsi1 > 50 : true
+dmiBearrsi = lookRSI? vrsi1 < 50 : true
 
 O = open
 C = close
@@ -37,51 +42,51 @@ data=(abs(open - close) <= (high - low) * DojiSize)
 plotchar(data, title="Doji", text='Doji', color=color.white)
 
 data2=(close[2] > open[2] and min(open[1], close[1]) > close[2] and open < min(open[1], close[1]) and close < open )
-plotshape(data2 and showCandlePatternsBear, title= "Evening Star", color=color.red, style=shape.arrowdown, text="Evening\nStar")
+plotshape(data2 and showCandlePatternsBear and dmiBull and dmiBullrsi, title= "Evening Star", color=color.red, style=shape.arrowdown, text="Evening\nStar")
 
 data3=(close[2] < open[2] and max(open[1], close[1]) < close[2] and open > max(open[1], close[1]) and close > open )
-plotshape(data3 and showCandlePatternsBull,  title= "Morning Star", location=location.belowbar, color=color.lime, style=shape.arrowup, text="Morning\nStar")
+plotshape(data3 and showCandlePatternsBull and dmiBear and dmiBearrsi,  title= "Morning Star", location=location.belowbar, color=color.lime, style=shape.arrowup, text="Morning\nStar")
 
 data4=(open[1] < close[1] and open > close[1] and high - max(open, close) >= abs(open - close) * 3 and min(close, open) - low <= abs(open - close))
-plotshape(data4 and showCandlePatternsBear, title= "Shooting Star", color=color.red, style=shape.arrowdown, text="Shooting\nStar")
+plotshape(data4 and showCandlePatternsBear and dmiBull and dmiBullrsi, title= "Shooting Star", color=color.red, style=shape.arrowdown, text="Shooting\nStar")
 
 data5=(((high - low)>3*(open -close)) and  ((close - low)/(.001 + high - low) > 0.6) and ((open - low)/(.001 + high - low) > 0.6))
-plotshape(data5 and showCandlePatternsBull, title= "Hammer", location=location.belowbar, color=color.white, style=shape.diamond, text="H")
+plotshape(data5 and showCandlePatternsBull and dmiBear and dmiBearrsi, title= "Hammer", location=location.belowbar, color=color.white, style=shape.diamond, text="H")
 
 data5b=(((high - low)>3*(open -close)) and  ((high - close)/(.001 + high - low) > 0.6) and ((high - open)/(.001 + high - low) > 0.6))
-plotshape(data5b and showCandlePatternsBull, title= "Inverted Hammer", location=location.belowbar, color=color.white, style=shape.diamond, text="IH")
+plotshape(data5b and showCandlePatternsBull and dmiBear and dmiBearrsi, title= "Inverted Hammer", location=location.belowbar, color=color.white, style=shape.diamond, text="IH")
 
 data6=(close[1] > open[1] and open > close and open <= close[1] and open[1] <= close and open - close < close[1] - open[1] )
-plotshape(data6 and showCandlePatternsBear, title= "Bearish Harami",  color=color.red, style=shape.arrowdown, text="Bearish\nH")
+plotshape(data6 and showCandlePatternsBear and dmiBull and dmiBullrsi, title= "Bearish Harami",  color=color.red, style=shape.arrowdown, text="Bearish\nH")
 
 data7=(open[1] > close[1] and close > open and close <= open[1] and close[1] <= open and close - open < open[1] - close[1] )
-plotshape(data7 and showCandlePatternsBull,  title= "Bullish Harami", location=location.belowbar, color=color.lime, style=shape.arrowup, text="Bullish\nH")
+plotshape(data7 and showCandlePatternsBull and dmiBear and dmiBearrsi,  title= "Bullish Harami", location=location.belowbar, color=color.lime, style=shape.arrowup, text="Bullish\nH")
 
 data8=(close[1] > open[1] and open > close and open >= close[1] and open[1] >= close and open - close > close[1] - open[1] )
-plotshape(data8 and showCandlePatternsBear,  title= "Bearish Engulfing", color=color.red, style=shape.arrowdown, text="Bear\nE")
+plotshape(data8 and showCandlePatternsBear and dmiBull and dmiBullrsi,  title= "Bearish Engulfing", color=color.red, style=shape.arrowdown, text="Bear\nE")
 
 data9=(open[1] > close[1] and close > open and close >= open[1] and close[1] >= open and close - open > open[1] - close[1] )
-plotshape(data9 and showCandlePatternsBull, title= "Bullish Engulfing", location=location.belowbar, color=color.lime, style=shape.arrowup, text="Bullish\nE")
+plotshape(data9 and showCandlePatternsBull and dmiBear and dmiBearrsi, title= "Bullish Engulfing", location=location.belowbar, color=color.lime, style=shape.arrowup, text="Bullish\nE")
 
 upper = highest(10)[1]
 data10=(close[1] < open[1] and  open < low[1] and close > close[1] + ((open[1] - close[1])/2) and close < open[1])
-plotshape(data10 and showCandlePatternsBull, title= "Piercing Line", location=location.belowbar, color=color.lime, style=shape.arrowup, text="Piercing\nLine")
+plotshape(data10 and showCandlePatternsBull and dmiBear and dmiBearrsi, title= "Piercing Line", location=location.belowbar, color=color.lime, style=shape.arrowup, text="Piercing\nLine")
 
 lower = lowest(10)[1]
 data11=(low == open and  open < lower and open < close and close > ((high[1] - low[1]) / 2) + low[1])
-plotshape(data11 and showCandlePatternsBull, title= "Bullish Belt", location=location.belowbar, color=color.lime, style=shape.arrowup, text="Bullish\nBelt")
+plotshape(data11 and showCandlePatternsBull and dmiBear and dmiBearrsi, title= "Bullish Belt", location=location.belowbar, color=color.lime, style=shape.arrowup, text="Bullish\nBelt")
 
 data12=(open[1]>close[1] and open>=open[1] and close>open)
-plotshape(data12 and showCandlePatternsBull, title= "Bullish Kicker", location=location.belowbar, color=color.lime, style=shape.arrowup, text="Bullish\nKicker")
+plotshape(data12 and showCandlePatternsBull and dmiBear and dmiBearrsi, title= "Bullish Kicker", location=location.belowbar, color=color.lime, style=shape.arrowup, text="Bullish\nKicker")
 
 data13=(open[1]<close[1] and open<=open[1] and close<=open)
-plotshape(data13 and showCandlePatternsBear, title= "Bearish Kicker", color=color.red, style=shape.arrowdown, text="Bearish\nKicker")
+plotshape(data13 and showCandlePatternsBear and dmiBull and dmiBullrsi, title= "Bearish Kicker", color=color.red, style=shape.arrowdown, text="Bearish\nKicker")
 
 data14=(((high-low>4*(open-close))and((close-low)/(.001+high-low)>=0.75)and((open-low)/(.001+high-low)>=0.75)) and high[1] < open and high[2] < open)
-plotshape(data14 and showCandlePatternsBear,  title= "Hanging Man", color=color.red, style=shape.arrowdown, text="Hanging\nMan")
+plotshape(data14 and showCandlePatternsBear and dmiBull and dmiBullrsi,  title= "Hanging Man", color=color.red, style=shape.arrowdown, text="Hanging\nMan")
 
 data15=((close[1]>open[1])and(((close[1]+open[1])/2)>close)and(open>close)and(open>close[1])and(close>open[1])and((open-close)/(.001+(high-low))>0.6))
-plotshape(data15 and showCandlePatternsBear, title= "Dark Cloud Cover", color=color.red, style=shape.arrowdown, text="Dark\nCloudCover")
+plotshape(data15 and showCandlePatternsBear and dmiBull and dmiBullrsi, title= "Dark Cloud Cover", color=color.red, style=shape.arrowdown, text="Dark\nCloudCover")
 
 // Three Inside Up (Confirmed Bullish Harami)
 bullThreeInsideUp = dmiBear and
@@ -307,7 +312,7 @@ sellavg = (((low+close)/1.99 + (low*(1-low/open)*(1-((low*open)/(close*high)))/1
 
 if show_signals
     if bullish
-        label1 = label.new(bar_index[rightbars], low[rightbars]/1.01, text=("BUY: \n"+ tostring(buyavg)), style=label.style_label_up, color=color.yellow)
+        label1 = label.new(bar_index[rightbars], low[rightbars]/1.01, text=("BUY: \n"+ tostring(buyavg)), style=label.style_label_up, color=color.green)
         label.set_size(label1, size.small)
     if bearish
         label2 = label.new(bar_index[rightbars], high[rightbars]*1.01, text=("SELL: \n"+ tostring(sellavg)), style=label.style_label_down, color=#8181F7)
@@ -461,7 +466,7 @@ alertcondition(isbroken and not isbroken[1], title='Channel Break', message='Pri
 ///////////////////TRAILING STOP LOSS ////////////////////
 
 ATR_Period = input(14)
-ATR_Mult = input(3.5)
+ATR_Mult = input(3.0)
 var float ATR_TrailSL = na
 var int pos = na
 xATR = atr(ATR_Period)
@@ -487,12 +492,20 @@ plot(ATR_TrailSL, "Trailing StopLoss", atr_color, linewidth=2)
 if show_STOPLOSSprice
     if pos ==-1
         label ShortStop =label.new(bar_index, na, 'SHORT stop price: \n' + tostring(ATR_TrailSL), color=color.blue, textcolor=color.white, style=label.style_labeldown, yloc=yloc.abovebar)
-        label.delete(ShortStop[1])    
+        label.delete(ShortStop[1]) 
+        
     if pos == 1
         label LongStop = label.new(bar_index, na, 'LONG stop price: \n' + tostring(ATR_TrailSL), color=color.red, textcolor=color.white, style=label.style_labelup, yloc=yloc.belowbar)
         label.delete(LongStop[1])
 
-
+if show_STOPLOSSprice and pos == 1 and close[1] < nz(ATR_TrailSL[1], 0)
+    label Long =label.new(bar_index, na, 'LONG: \n' + tostring(buyavg), color=color.green, textcolor=color.white, style=label.style_labelup, yloc=yloc.belowbar, size=size.small)
+    label.delete(Long[1])
+if show_STOPLOSSprice and pos == -1 and close[1] > nz(ATR_TrailSL[1], 0)
+    label Short =label.new(bar_index, na, 'SHORT: \n' + tostring(sellavg), color=#8181F7, textcolor=color.black, style=label.style_labeldown, yloc=yloc.abovebar, size=size.small)
+    label.delete(Short[1])
+    
+    
 //////////////////Bitcoin Investor Tool: 2-Year MA Multiplier + 1-Year MA///////////
 ma2year = sma(close, 730)
 ma2yearx5 = ma2year*5
@@ -553,7 +566,7 @@ loopback = input(defval = 150, title = "Number of Bars to search", minval = 30, 
 widthr = input(defval = 5., title = "Channel Width of the Cup", minval = 1)
 check_hc = input(defval = "Close", title = "Source for Breakout", options = ["Close", "High/Low"])
 include_rate = input(75., title = "Contained Bar Rate %", minval = 10, maxval = 100) / 100
-show_channel = input(false, title = "Show Channels of Cups")
+show_channel = input(true, title = "Show Channels of Cups")
 no_label = input(false, title = "Don't Show Labels")
 remove_old_lines = input(false, title = "Remove Old Lines")
 remove_old_labels = input(false, title = "Remove Old Labels")
